@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <p>This is main page.</p>
+    <a href = "/path/page2">안녕</a>
+</body>
+<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.5.0/kakao.min.js"
+        integrity="sha384-kYPsUbBPlktXsY6/oNHSUDZoTX6+YI51f63jCPEIPFP09ttByAdxd2mEjKuhdqn4" crossorigin="anonymous"></script>
+<script>
+    Kakao.init('ea824815503273f372ee072a86ee2fa5'); // 사용하려는 앱의 JavaScript 키 입력
+</script>
+
+
+<!--<script>
+    const xhr = new XMLHttpRequest();
+    let app_key = "ea824815503273f372ee072a86ee2fa5"
+    let code = "tG-CFnX1hSPtV2gFpac_B87XTa53W5iAuQcO_0RQCmGuJqLN-FEGNNVIMxgKPXTbAAABjFvWfrbgLMgnBn6ZSw"
+    let url = 'https://kauth.kakao.com/oauth/token'
+
+    let data = {
+        "grant_type" : "authorization_code",
+        "client_id" : app_key,
+        "redirect_uri" : "https://localhost/8080",
+        "code" : code
+    }
+    xhr.open('POST', url)
+    xhr.send(data)
+
+    xhr.onload = function() {
+        console.log(JSON.parse(xhr.response))
+    }
+</script> -->
+
+<script>
+    let app_key = "ea824815503273f372ee072a86ee2fa5"
+    let code = "gt55YyPnq9LUCAOsk-sIARwqVUa3u5GNOSIFCByqqxfsF0fZ18NMKXfeXDoKKcleAAABjFvsj7TmTYKY7N6ACw"
+    let _data = {
+        grant_type : "authorization_code",
+        client_id : app_key,
+        redirect_uri : "https://localhost/8080",
+        code : code
+    }
+
+    fetch("https://kauth.kakao.com/oauth/token", {
+        method : "POST",
+        body : JSON.stringify(_data),
+        headers : {
+            "Content-type": "application/json; charset=UTF-8"
+        }
+    })
+        .then(response => response.json())
+        .then(data => {
+            console.log(data);
+        })
+        .then(err => console.log(err));
+
+</script>
+</html>

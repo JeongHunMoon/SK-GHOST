@@ -1,0 +1,215 @@
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <title>카톡 공유</title>
+  <script type="text/JavaScript" src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
+  <script>
+    // SDK를 초기화 합니다. 사용할 앱의 JavaScript 키를 설정해 주세요.
+    Kakao.init('2e39201190179fe7cd5eb25903daba8a'); //★ 수정 할 것 : 내 애플리케이션>앱 설정>앱 키 : JAVASCRIPT KEY 입력하세요
+    // SDK 초기화 여부를 판단합니다.
+    console.log(Kakao.isInitialized());
+  </script>
+  <script type="text/javascript">
+
+    let frienduuid = null;
+
+    function loginWithKakao() {
+      const xhr = new XMLHttpRequest();
+      let userrefreshToken = null;
+      var url = 'https://kapi.kakao.com/v1/api/talk/friends';
+
+      Kakao.Auth.login({
+        success: function (authObj) {
+          alert("login :" + JSON.stringify(authObj));
+          Kakao.Auth.setAccessToken(authObj.access_token); // 사용자 처음 로그인시 발급된 토큰으로 설정
+          userrefreshToken = authObj.refresh_token // refresh token 값 저장.
+
+          console.log("처음 로그인 시 설정된 토큰" + Kakao.Auth.getAccessToken());
+          console.log("처음 로그인 시 설정된 리프레시 토큰" + userrefreshToken);
+
+          refreshAccessToken(userrefreshToken) // 토큰 갱신 2시간이전에 반복적으로 수행하도록 로직 작성 필요.
+
+          //내 토큰 넣어서 GET 보내고 친구 uuid 받아오기
+          // 해당 함수가 작동되기 위해서는 나, 내 모든 친구들이 도구 -> 카카오톡 소셜 -> 카카오톡 친구 목록 가져오기에서 등록해야함.(친구만 해서는 안되며 친구 모두 완료 후 나도 마지막에 해야함)
+          xhr.open('GET', url, true);
+          xhr.setRequestHeader('Authorization', 'Bearer ' + authObj.access_token);// 헤더에 Authorization 추가
+          xhr.send();
+          // 아래 주석은 만약 로그인시 메세지보내기 체크를 안했을때 다시 물어보는 알림창이며
+          // Kakao.Auth.authorize({
+          //     redirectUri: 'https://localhost:8080/123.html',
+          //     scope: ["talk_message","profile"],
+          // })
+        },
+        fail: function (err) {
+          alert(JSON.stringify(err))
+        },
+      })
+      xhr.onload = function () { //비동기함수는 이벤트가 발생해야 실행되므로 ..
+        //console.log(xhr.response);
+        console.log(xhr.responseText);
+        var payload = JSON.parse(xhr.responseText)
+        frienduuid = payload.elements[0].uuid;
+        console.log(frienduuid)
+      }
+    }
+
+    //unlink (다시 로그인할때 체크표시 같은거 하도록함)å
+    function unlinkWithKakao() {
+      Kakao.API.request({
+        url: '/v1/user/unlink',
+        success: function (response) {
+          alert("unlink :" + JSON.stringify(response));
+        },
+        fail: function (error) {
+          console.log(error);
+        }
+      });
+    }
+
+    //아래 함수 삭제 예정
+    function shareMessage() {
+      Kakao.Share.sendDefault({
+        objectType: 'text',
+        text:
+                '기본 템플릿으로 제공되는 텍스트 템플릿은 텍스트를 최대 200자까지 표시할 수 있습니다. 텍스트 템플릿은 텍스트 영역과 하나의 기본 버튼을 가집니다. 임의의 버튼을 설정할 수도 있습니다. 여러 장의 이미지, 프로필 정보 등 보다 확장된 형태의 카카오톡 공유는 다른 템플릿을 이용해 보낼 수 있습니다.',
+        link: {
+          // [내 애플리케이션] > [플랫폼] 에서 등록한 사이트 도메인과 일치해야 함
+          mobileWebUrl: 'localhost:8080',
+          webUrl: 'localhost:8080',
+        },
+      });
+    }
+
+    // 아래 함수 호출 시 나에게 카톡이 전송됨.
+    function sendToMe() {
+      Kakao.API.request({
+        url: '/v2/api/talk/memo/default/send',
+        data: {
+          template_object: {
+            object_type: 'text',
+            text:
+                    '기본 템플릿으로 제공되는 텍스트 템플릿은 텍스트를 최대 200자까지 표시할 수 있습니다. 텍스트 템플릿은 텍스트 영역과 하나의 기본 버튼을 가집니다. 임의의 버튼을 설정할 수도 있습니다. 여러 장의 이미지, 프로필 정보 등 보다 확장된 형태의 카카오톡 공유는 다른 템플릿을 이용해 보낼 수 있습니다.',
+            link: {
+              // [내 애플리케이션] > [플랫폼] 에서 등록한 사이트 도메인과 일치해야 함
+              mobile_web_url: 'localhost:8080/123.html', // //https://developers.kakao.com
+              web_url: 'localhost:8080/123.html'
+            },
+          },
+        },
+      })
+              .then(function (res) {
+                alert('success: ' + JSON.stringify(res));
+              })
+              .catch(function (err) {
+                alert('error: ' + JSON.stringify(err));
+              });
+    }
+
+    function sendToFriends() {
+
+      Kakao.API.request({
+        url: '/v1/api/talk/friends/message/default/send',
+        data: {
+          receiver_uuids: [frienduuid], //frienduuid 에
+          template_object: {
+            object_type: 'feed',
+            content: {
+              title: '카카오톡 링크 4.0',
+              description: '디폴트 템플릿 FEED',
+              image_url: 'http://mud-kage.kakao.co.kr/dn/Q2iNx/btqgeRgV54P/VLdBs9cvyn8BJXB3o7N8UK/kakaolink40_original.png',
+              link: {
+                web_url: 'https://developers.kakao.com',
+                mobile_web_url: 'https://developers.kakao.com',
+              },
+            },
+            social: {
+              like_count: 100,
+              comment_count: 200,
+            },
+            button_title: '바로 확인',
+          },
+        },
+        success: function (response) {
+          alert("친구에게 보내기 성공");
+        },
+        fail: function (error) {
+          alert("친구에게 보내기 실패");
+        },
+      });
+    }
+
+    // 해당 함수 삭제 예정
+    function refreshFriendUUID(newAccessToken) {
+      const xhr = new XMLHttpRequest();
+      const url = 'https://kapi.kakao.com/v1/api/talk/friends';
+
+      xhr.open('GET', url, true);
+      xhr.setRequestHeader('Authorization', 'Bearer ' + newAccessToken);
+
+      xhr.onload = function () {
+        if (xhr.status === 200) {
+          const payload = JSON.parse(xhr.responseText);
+          frienduuid = payload.elements[0].uuid;
+          console.log('갱신된 친구 UUID:', frienduuid);
+        } else {
+          console.error('Failed to refresh friend UUID:', xhr.responseText);
+        }
+      };
+
+      xhr.send();
+    }
+
+    function refreshAccessToken(refreshToken) {
+      const clientId = 'ea824815503273f372ee072a86ee2fa5';
+      const clientSecret = 'vX05Pr1kZujPDGJUc5Si8aEZW7LRuqcp';
+      const xhr = new XMLHttpRequest();
+      const url = `https://kauth.kakao.com/oauth/token?grant_type=refresh_token&client_id=${clientId}&client_secret=${clientSecret}&refresh_token=${refreshToken}`;
+
+      xhr.open('POST', url, true);
+      xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded;charset=utf-8');
+
+      xhr.onload = function () {
+        if (xhr.status === 200) {
+          const response = JSON.parse(xhr.responseText);
+          const newAccessToken = response.access_token;
+
+          // 여기서 새로 받은 Access Token을 사용하여 다른 작업을 수행할 수 있습니다.
+          // 예를 들면, 친구 목록을 갱신하는 API 호출 등...
+          Kakao.Auth.setAccessToken(newAccessToken);
+          console.log("갱신될 새 토큰" + newAccessToken);
+          console.log("갱신된 새 토큰이 등록됨" + Kakao.Auth.getAccessToken());
+
+          //refreshFriendUUID(newAccessToken);
+
+          alert('New Access Token:' + newAccessToken);
+        } else {
+          alert('Failed to refresh Access Token:' + xhr.responseText) ;
+        }
+      };
+
+      xhr.send();
+    }
+  </script>
+</head>
+
+
+<body>
+<a id="custom-login-btn" href="javascript:loginWithKakao()">
+  <img src="//k.kakaocdn.net/14/dn/btqCn0WEmI3/nijroPfbpCa4at5EIsjyf0/o.jpg" width="222"/>
+</a>
+
+<a id="kakaotalk-sharing-btn" href="javascript:shareMessage()">
+  <img src="https://developers.kakao.com/assets/img/about/logos/kakaotalksharing/kakaotalk_sharing_btn_medium.png"
+       alt="카카오톡 공유 보내기 버튼"/>
+</a>
+
+
+<button onClick="sendToMe()">"send to me"</button>
+<button onClick="unlinkWithKakao()">UNLINK</button>
+<p id="token-result"></p>
+<button className="api-btn" onClick="sendToFriends()">친구에게 메시지 보내기</button>
+
+
+</body>
+
+</html>
